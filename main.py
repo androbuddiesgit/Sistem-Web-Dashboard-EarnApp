@@ -169,7 +169,11 @@ async def deploy_bot(req: DeployReq):
         
     container_name = f"earnapp_{next_id}"
 
-    # Run Docker Container
+    # Auto-Fix Armbian Network (IP Forwarding & NAT Masquerade) agar Bridge mode Docker bisa internetan
+    fix_net_cmd = "sysctl -w net.ipv4.ip_forward=1 && iptables -P FORWARD ACCEPT && iptables -t nat -C POSTROUTING -j MASQUERADE || iptables -t nat -A POSTROUTING -j MASQUERADE"
+    await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], fix_net_cmd)
+
+    # Run Docker Container (Tetap pakai Bridge mode dengan DNS Google agar terisolasi dari docker0 host)
     run_cmd = f"docker run -d --restart always --dns 8.8.8.8 --dns 1.1.1.1 -e EARNAPP_UUID={uid} --name {container_name} fazalfarhan01/earnapp:lite"
     succ3, out3, err3 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], run_cmd)
 
