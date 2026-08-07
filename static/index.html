@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EarnApp Cluster Dashboard</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 (CDN) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f172a',
+                        cardbg: '#1e293b',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased selection:bg-indigo-500 selection:text-white">
+    <div id="app" v-cloak class="pb-12">
+        <!-- Navbar -->
+        <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-lg">
+            <div class="flex items-center gap-3">
+                <i class="ph-fill ph-infinity text-3xl text-indigo-400"></i>
+                <h1 class="text-xl font-bold tracking-wider text-white">EARNAPP<span class="text-indigo-400">CLUSTER</span></h1>
+            </div>
+            <div>
+                <button @click="fetchData" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors flex items-center gap-2 font-medium">
+                    <i class="ph ph-arrows-clockwise" :class="{'animate-spin': loading}"></i> Refresh
+                </button>
+            </div>
+        </nav>
+
+        <main class="container mx-auto px-4 mt-8">
+            
+            <!-- Nodes Section -->
+            <section class="mb-10">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-semibold flex items-center gap-2"><i class="ph ph-hard-drives text-indigo-400"></i> STB Nodes</h2>
+                    <button @click="showAddNode = true" class="px-3 py-1.5 text-sm bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors flex items-center gap-2">
+                        <i class="ph ph-plus"></i> Add STB
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div v-for="node in nodes" :key="node.ip" class="glass p-5 rounded-2xl shadow-xl border border-slate-700 relative overflow-hidden group">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500 opacity-10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-lg font-bold">{{ node.ip }}</h3>
+                                <p class="text-slate-400 text-sm"><i class="ph ph-user"></i> {{ node.username }}</p>
+                            </div>
+                            <button @click="removeNode(node.ip)" class="text-red-400 hover:text-red-300 p-2 rounded-full hover:bg-red-400/10 transition-colors">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center">
+                            <span class="text-xs font-mono px-2 py-1 bg-slate-800 rounded-md text-slate-300">Port: {{ node.port }}</span>
+                            <button @click="deployBot(node.ip)" class="text-sm px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded-lg transition-colors flex items-center gap-1">
+                                <i class="ph ph-rocket-launch"></i> Auto-Deploy Bot
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Empty state -->
+                    <div v-if="nodes.length === 0" class="col-span-full glass p-8 rounded-2xl text-center border-dashed border-2 border-slate-700">
+                        <i class="ph ph-hard-drives text-4xl text-slate-500 mb-2"></i>
+                        <p class="text-slate-400">Belum ada STB yang ditambahkan.</p>
+                        <button @click="showAddNode = true" class="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors text-sm">Tambah STB Pertama</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bots Section -->
+            <section v-if="nodes.length > 0">
+                <h2 class="text-2xl font-semibold mb-4 flex items-center gap-2"><i class="ph ph-robot text-indigo-400"></i> EarnApp Bots</h2>
+                
+                <div v-if="loading" class="flex justify-center p-12">
+                    <i class="ph ph-spinner-gap animate-spin text-4xl text-indigo-500"></i>
+                </div>
+
+                <div v-else class="space-y-6">
+                    <div v-for="stb in botsData" :key="stb.ip" class="glass rounded-2xl shadow-xl border border-slate-700 overflow-hidden">
+                        <div class="bg-slate-800/80 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+                            <h3 class="font-bold flex items-center gap-2">
+                                <i class="ph-fill ph-hard-drive"></i> {{ stb.ip }}
+                                <span v-if="stb.connected" class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs border border-emerald-500/20 flex items-center gap-1">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div> Online
+                                </span>
+                                <span v-else class="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs border border-red-500/20 flex items-center gap-1">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-red-400"></div> Offline
+                                </span>
+                            </h3>
+                            <span class="text-sm text-slate-400">{{ stb.bots.length }} Bots</span>
+                        </div>
+                        
+                        <div class="p-6">
+                            <div v-if="!stb.connected" class="text-red-400 text-sm flex items-center gap-2">
+                                <i class="ph ph-warning-circle"></i> Connection Failed: {{ stb.error }}
+                            </div>
+                            
+                            <div v-else-if="stb.bots.length === 0" class="text-slate-400 text-sm text-center py-4">
+                                Tidak ada bot EarnApp di STB ini.
+                            </div>
+                            
+                            <div v-else class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="text-slate-400 text-sm border-b border-slate-700">
+                                            <th class="pb-3 pl-2 font-medium">Container Name</th>
+                                            <th class="pb-3 font-medium">Status</th>
+                                            <th class="pb-3 font-medium text-right pr-2">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-700/50">
+                                        <tr v-for="bot in stb.bots" :key="bot.id" class="hover:bg-slate-800/30 transition-colors">
+                                            <td class="py-4 pl-2 font-medium flex items-center gap-3">
+                                                <i class="ph-fill ph-robot text-indigo-400 text-lg"></i> {{ bot.name }}
+                                            </td>
+                                            <td class="py-4">
+                                                <span :class="{'text-emerald-400 bg-emerald-400/10 border-emerald-400/20': bot.state === 'running', 'text-amber-400 bg-amber-400/10 border-amber-400/20': bot.state !== 'running'}" class="px-2.5 py-1 rounded-md text-xs border font-medium">
+                                                    {{ bot.status }}
+                                                </span>
+                                            </td>
+                                            <td class="py-4 pr-2 text-right">
+                                                <div class="flex justify-end gap-2">
+                                                    <button v-if="bot.state !== 'running'" @click="botAction(stb.ip, 'start', bot.name)" class="p-2 text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors" title="Start">
+                                                        <i class="ph-fill ph-play"></i>
+                                                    </button>
+                                                    <button v-if="bot.state === 'running'" @click="botAction(stb.ip, 'stop', bot.name)" class="p-2 text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors" title="Stop">
+                                                        <i class="ph-fill ph-stop"></i>
+                                                    </button>
+                                                    <button @click="botAction(stb.ip, 'restart', bot.name)" class="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors" title="Restart">
+                                                        <i class="ph-fill ph-arrows-clockwise"></i>
+                                                    </button>
+                                                    <button @click="viewLogs(stb.ip, bot.name)" class="p-2 text-slate-300 hover:bg-slate-700 rounded-lg transition-colors" title="View Logs">
+                                                        <i class="ph-fill ph-terminal"></i>
+                                                    </button>
+                                                    <button @click="botAction(stb.ip, 'rm -f', bot.name)" class="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Delete">
+                                                        <i class="ph-fill ph-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modals -->
+        
+        <!-- Add Node Modal -->
+        <Transition name="modal">
+            <div v-if="showAddNode" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div class="glass w-full max-w-md rounded-2xl shadow-2xl border border-slate-600 overflow-hidden">
+                    <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+                        <h3 class="text-xl font-bold">Add New STB</h3>
+                        <button @click="showAddNode = false" class="text-slate-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                    </div>
+                    <form @submit.prevent="addNode" class="p-6 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">IP Address</label>
+                            <input v-model="newNode.ip" required type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="e.g. 192.168.1.10">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">SSH Port</label>
+                            <input v-model="newNode.port" required type="number" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="22">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">SSH Username</label>
+                            <input v-model="newNode.username" required type="text" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="root">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">SSH Password</label>
+                            <input v-model="newNode.password" required type="password" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="••••••••">
+                        </div>
+                        <div class="pt-4 flex justify-end gap-3">
+                            <button type="button" @click="showAddNode = false" class="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">Cancel</button>
+                            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition-colors">Save Node</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Log Viewer Modal -->
+        <Transition name="modal">
+            <div v-if="logModal.show" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div class="glass w-full max-w-4xl h-[80vh] flex flex-col rounded-2xl shadow-2xl border border-slate-600 overflow-hidden">
+                    <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+                        <h3 class="font-bold flex items-center gap-2"><i class="ph-fill ph-terminal text-indigo-400"></i> Logs: {{ logModal.container }} ({{ logModal.ip }})</h3>
+                        <button @click="logModal.show = false" class="text-slate-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                    </div>
+                    <div class="flex-1 bg-black p-4 overflow-auto font-mono text-sm">
+                        <div v-if="logModal.loading" class="text-indigo-400 flex items-center gap-2"><i class="ph ph-spinner-gap animate-spin"></i> Loading logs...</div>
+                        <pre v-else class="text-green-400 whitespace-pre-wrap break-all">{{ logModal.logs }}</pre>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Deploy Success Modal -->
+        <Transition name="modal">
+            <div v-if="deploySuccess" class="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+                <div class="bg-slate-800 border-2 border-emerald-500/50 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden text-center p-8 relative">
+                    <div class="w-20 h-20 mx-auto bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mb-6">
+                        <i class="ph-fill ph-check-circle text-5xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Bot Deployed!</h2>
+                    <p class="text-slate-400 mb-6">Bot <strong>{{ deployData.container }}</strong> berhasil dibuat di <strong>{{ deployData.ip }}</strong>.</p>
+                    
+                    <div class="bg-slate-900 rounded-xl p-4 mb-6 border border-slate-700 text-left">
+                        <p class="text-xs text-slate-500 mb-1">UUID</p>
+                        <p class="font-mono text-emerald-400 text-sm break-all mb-4">{{ deployData.uuid }}</p>
+                        <p class="text-xs text-amber-500 mb-2 font-bold"><i class="ph-fill ph-warning"></i> ACTION REQUIRED:</p>
+                        <p class="text-sm text-slate-300">Anda wajib mengklik tombol di bawah ini untuk menautkan perangkat ke akun EarnApp Anda agar bot bisa menghasilkan saldo.</p>
+                    </div>
+                    
+                    <a :href="deployData.link" target="_blank" @click="deploySuccess = false" class="block w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-white shadow-lg shadow-emerald-900/50 transition-all active:scale-95">
+                        Tautkan Perangkat Sekarang <i class="ph-bold ph-arrow-square-out ml-1"></i>
+                    </a>
+                </div>
+            </div>
+        </Transition>
+
+    </div>
+
+    <!-- Frontend App Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
