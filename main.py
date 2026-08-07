@@ -85,7 +85,8 @@ def remove_node(ip: str):
 
 async def fetch_bots_from_node(node):
     cmd = """docker ps -a --format '{"id":"{{.ID}}", "name":"{{.Names}}", "status":"{{.Status}}", "state":"{{.State}}"}' | grep 'earnapp_' || true"""
-    success, out, err = await asyncio.to_thread(execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
+    loop = asyncio.get_event_loop()
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
     bots = []
     if success and out:
         for line in out.splitlines():
@@ -128,8 +129,8 @@ async def bot_action(req: ActionReq):
     if not re.match(r'^earnapp_[0-9]+$', req.container_name):
         raise HTTPException(status_code=400, detail="Invalid container name")
 
-    cmd = f"docker {req.action} {req.container_name}"
-    success, out, err = await asyncio.to_thread(execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
+    loop = asyncio.get_event_loop()
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
     
     if success:
         return {"message": f"Action {req.action} successful", "output": out}
@@ -151,14 +152,15 @@ async def deploy_bot(req: DeployReq):
     # API Registration Command
     reg_cmd = f"curl -s -X POST 'https://client.earnapp.com/install_device?uuid={uid}&version=1.651.510&arch=arm64&appid=node_earnapp.com&os=DBAI-2K25+24.5.1+focal' -H 'Content-Type: application/json' -d '{{\"serial\":\"{serial}\"}}'"
     
-    succ, out, err = await asyncio.to_thread(execute_ssh, node['ip'], node['username'], node['password'], node['port'], reg_cmd)
+    loop = asyncio.get_event_loop()
+    succ, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], reg_cmd)
     
     if "ok" not in out.lower():
         raise HTTPException(status_code=500, detail=f"Registration failed: {out} {err}")
 
     # Determine next container name
     find_cmd = "docker ps -a --format '{{.Names}}' | grep '^earnapp_' | sed 's/earnapp_//' | sort -n | tail -1"
-    succ2, out2, err2 = await asyncio.to_thread(execute_ssh, node['ip'], node['username'], node['password'], node['port'], find_cmd)
+    succ2, out2, err2 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], find_cmd)
     
     next_id = 1
     if succ2 and out2.strip().isdigit():
@@ -168,7 +170,7 @@ async def deploy_bot(req: DeployReq):
 
     # Run Docker Container
     run_cmd = f"docker run -d --restart always --network host -e EARNAPP_UUID={uid} --name {container_name} fazalfarhan01/earnapp:lite"
-    succ3, out3, err3 = await asyncio.to_thread(execute_ssh, node['ip'], node['username'], node['password'], node['port'], run_cmd)
+    succ3, out3, err3 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], run_cmd)
 
     if succ3:
         return {
@@ -191,7 +193,8 @@ async def get_logs(ip: str, container_name: str):
         raise HTTPException(status_code=400, detail="Invalid container name")
         
     cmd = f"docker logs --tail 50 {container_name}"
-    success, out, err = await asyncio.to_thread(execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
+    loop = asyncio.get_event_loop()
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
     
     if success:
         return {"logs": out or err}
