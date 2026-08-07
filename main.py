@@ -19,4 +19,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import argparse
+    import os
+
+    parser = argparse.ArgumentParser(description="EarnApp Cluster Dashboard V2")
+    parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)), help="Port to run the dashboard on (default: 8000)")
+    args = parser.parse_args()
+
+    uvicorn.run(app, host="0.0.0.0", port=args.port)
