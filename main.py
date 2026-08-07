@@ -130,6 +130,7 @@ async def bot_action(req: ActionReq):
         raise HTTPException(status_code=400, detail="Invalid container name")
 
     loop = asyncio.get_event_loop()
+    cmd = f"docker {req.action} {req.container_name}"
     success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
     
     if success:
