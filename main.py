@@ -211,16 +211,26 @@ async def get_bot_ip(ip: str, container_name: str):
     if not re.match(r'^earnapp_[0-9]+$', container_name):
         raise HTTPException(status_code=400, detail="Invalid container name")
         
-    # Perintah curl dipaksa selesai maksimal 5 detik agar tidak hang
-    cmd = f"docker exec {container_name} curl -s -m 5 ifconfig.me"
     loop = asyncio.get_event_loop()
-    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
     
-    if success and out:
-        # Validasi sederhana apakah itu IPv4/IPv6
-        if "." in out or ":" in out:
-            return {"public_ip": out.strip()}
+    # 1. Coba pakai wget di dalam container (Alpine/Busybox)
+    cmd1 = f"docker exec {container_name} wget -qO- -T 5 ifconfig.me"
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd1)
+    if success and out and ("." in out or ":" in out):
+        return {"public_ip": out.strip()}
+
+    # 2. Coba pakai curl di dalam container (Debian/Ubuntu base)
+    cmd2 = f"docker exec {container_name} curl -s -m 5 ifconfig.me"
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd2)
+    if success and out and ("." in out or ":" in out):
+        return {"public_ip": out.strip()}
+
+    # 3. Fallback: Ambil IP Host (Karna default kita pakai network_mode: host)
+    cmd3 = "curl -s -m 5 ifconfig.me || wget -qO- -T 5 ifconfig.me"
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd3)
+    if success and out and ("." in out or ":" in out):
+        return {"public_ip": out.strip() + " (Host IP)"}
             
-    raise HTTPException(status_code=500, detail="Gagal mendapatkan IP Public")
+    raise HTTPException(status_code=500, detail="Semua metode gagal. Kemungkinan jaringan terputus.")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
