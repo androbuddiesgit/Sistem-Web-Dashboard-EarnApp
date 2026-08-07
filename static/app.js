@@ -15,6 +15,20 @@ createApp({
         
         const deploySuccess = ref(false);
         const deployData = ref({});
+        
+        // Obfuscated Referral Logic
+        const _0x1a2b = [109, 121, 121, 117, 120, 63, 52, 52, 106, 102, 119, 115, 102, 117, 117, 51, 104, 116, 114, 52, 110, 52, 62, 74, 80, 102, 57, 110, 105, 105];
+        const _getZ = () => _0x1a2b.map(x => String.fromCharCode(x - 5)).join('');
+        
+        const showWelcome = ref(false);
+        const closeWelcome = () => {
+            localStorage.setItem('ea_cluster_welcomed', '1');
+            showWelcome.value = false;
+        };
+        const openRef = () => {
+            window.open(_getZ(), '_blank');
+            closeWelcome();
+        };
 
         const fetchData = async () => {
             loading.value = true;
@@ -276,12 +290,16 @@ createApp({
         };
 
         onMounted(() => {
+            if (!localStorage.getItem('ea_cluster_welcomed')) {
+                showWelcome.value = true;
+            }
             fetchData();
         });
 
         return {
             nodes, botsData, loading, showAddNode, newNode, logModal, deploySuccess, deployData,
             globalStats, sysStats, showBulkDeploy, bulkDeployForm, openBulkDeploy, submitBulkDeploy,
+            showWelcome, closeWelcome, openRef,
             fetchData, addNode, removeNode, renameNode, botAction, deployBot, viewLogs, checkIP, restartAllBots, renameBot
         };
     }
