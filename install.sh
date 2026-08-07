@@ -23,8 +23,7 @@ cd earnapp-dashboard
 
 # 3. Install Python Dependencies
 echo "[*] Menginstal Python Library (FastAPI, Uvicorn, Paramiko)..."
-# Menggunakan opsi --break-system-packages karena di Armbian modern pip diblokir secara default
-pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt
+pip3 install -r requirements.txt
 
 # 4. Create Systemd Service
 echo "[*] Membuat Systemd Service agar Auto-Run saat STB nyala..."
