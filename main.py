@@ -201,4 +201,26 @@ async def get_logs(ip: str, container_name: str):
     else:
         raise HTTPException(status_code=500, detail=f"Log fetch failed: {out or err}")
 
+@app.get("/api/bots/ip")
+async def get_bot_ip(ip: str, container_name: str):
+    nodes = load_nodes()
+    node = next((n for n in nodes if n['ip'] == ip), None)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+        
+    if not re.match(r'^earnapp_[0-9]+$', container_name):
+        raise HTTPException(status_code=400, detail="Invalid container name")
+        
+    # Perintah curl dipaksa selesai maksimal 5 detik agar tidak hang
+    cmd = f"docker exec {container_name} curl -s -m 5 ifconfig.me"
+    loop = asyncio.get_event_loop()
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
+    
+    if success and out:
+        # Validasi sederhana apakah itu IPv4/IPv6
+        if "." in out or ":" in out:
+            return {"public_ip": out.strip()}
+            
+    raise HTTPException(status_code=500, detail="Gagal mendapatkan IP Public")
+
 app.mount("/static", StaticFiles(directory="static"), name="static")

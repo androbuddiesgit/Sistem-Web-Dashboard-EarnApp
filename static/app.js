@@ -119,13 +119,39 @@ createApp({
             logModal.value.loading = false;
         };
 
+        const checkIP = async (ip, container_name) => {
+            for (let stb of botsData.value) {
+                if (stb.ip === ip) {
+                    for (let bot of stb.bots) {
+                        if (bot.name === container_name) {
+                            bot.ip_loading = true;
+                            bot.public_ip = null;
+                            try {
+                                const res = await fetch(`/api/bots/ip?ip=${ip}&container_name=${container_name}`);
+                                const data = await res.json();
+                                if (res.ok) {
+                                    bot.public_ip = data.public_ip;
+                                } else {
+                                    bot.public_ip = 'Error';
+                                }
+                            } catch (e) {
+                                bot.public_ip = 'Failed';
+                            }
+                            bot.ip_loading = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        };
+
         onMounted(() => {
             fetchData();
         });
 
         return {
             nodes, botsData, loading, showAddNode, newNode, logModal, deploySuccess, deployData,
-            fetchData, addNode, removeNode, botAction, deployBot, viewLogs
+            fetchData, addNode, removeNode, botAction, deployBot, viewLogs, checkIP
         };
     }
 }).mount('#app');

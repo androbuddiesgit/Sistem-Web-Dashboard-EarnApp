@@ -134,8 +134,19 @@
                                     </thead>
                                     <tbody class="divide-y divide-slate-700/50">
                                         <tr v-for="bot in stb.bots" :key="bot.id" class="hover:bg-slate-800/30 transition-colors">
-                                            <td class="py-4 pl-2 font-medium flex items-center gap-3">
-                                                <i class="ph-fill ph-robot text-indigo-400 text-lg"></i> {{ bot.name }}
+                                            <td class="py-4 pl-2 font-medium">
+                                                <div class="flex items-center gap-3 mb-1">
+                                                    <i class="ph-fill ph-robot text-indigo-400 text-lg"></i> {{ bot.name }}
+                                                </div>
+                                                <div v-if="bot.state === 'running'" class="text-xs text-slate-400 flex items-center gap-1">
+                                                    <button v-if="!bot.public_ip && !bot.ip_loading" @click="checkIP(stb.ip, bot.name)" class="text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                                                        <i class="ph ph-globe"></i> Cek IP Publik
+                                                    </button>
+                                                    <span v-if="bot.ip_loading" class="text-indigo-400"><i class="ph ph-spinner-gap animate-spin"></i> Mengecek...</span>
+                                                    <span v-if="bot.public_ip" class="text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded flex items-center gap-1 font-mono">
+                                                        <i class="ph-fill ph-check-circle"></i> {{ bot.public_ip }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td class="py-4">
                                                 <span :class="{'text-emerald-400 bg-emerald-400/10 border-emerald-400/20': bot.state === 'running', 'text-amber-400 bg-amber-400/10 border-amber-400/20': bot.state !== 'running'}" class="px-2.5 py-1 rounded-md text-xs border font-medium">
