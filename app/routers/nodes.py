@@ -22,7 +22,18 @@ def add_node(node: Node):
     for n in nodes:
         if n['ip'] == node.ip:
             raise HTTPException(status_code=400, detail="Node already exists")
-    nodes.append(node.dict())
+    node_dict = node.dict()
+    
+    # Test SSH connection
+    success, out, err = run_ssh_command(node_dict, "echo 'SSH Connection Successful'")
+    if not success:
+        raise HTTPException(status_code=400, detail=f"Koneksi SSH Gagal: {err}")
+        
+    # Auto-Fix Network Configuration for Docker (Silent)
+    fix_cmd = "sudo sysctl -w net.ipv4.ip_forward=1 && sudo iptables -P FORWARD ACCEPT"
+    run_ssh_command(node_dict, fix_cmd)
+
+    nodes.append(node_dict)
     save_nodes(nodes)
     return {"message": "Node added successfully"}
 
