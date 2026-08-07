@@ -5,6 +5,8 @@ createApp({
         const nodes = ref([]);
         const botsData = ref([]);
         const loading = ref(false);
+        const globalStats = ref({ stbs: 0, bots: 0, online: 0, offline: 0 });
+        const sysStats = ref({});
         const showAddNode = ref(false);
         
         const newNode = ref({ ip: '', port: 22, username: 'root', password: '', name: '' });
@@ -24,6 +26,36 @@ createApp({
                 // Fetch bots
                 const resBots = await fetch('/api/bots');
                 botsData.value = await resBots.json();
+                
+                // Calculate Global Stats
+                let totalBots = 0;
+                let onlineBots = 0;
+                let offlineBots = 0;
+                botsData.value.forEach(stb => {
+                    if (stb.connected) {
+                        stb.bots.forEach(bot => {
+                            totalBots++;
+                            if (bot.state === 'running') onlineBots++;
+                            else offlineBots++;
+                        });
+                    }
+                });
+                globalStats.value = {
+                    stbs: nodes.value.length,
+                    bots: totalBots,
+                    online: onlineBots,
+                    offline: offlineBots
+                };
+                
+                // Fetch System Monitor Stats asynchronously
+                fetch('/api/monitor').then(res => res.json()).then(data => {
+                    const statsMap = {};
+                    data.forEach(item => {
+                        statsMap[item.ip] = item.data;
+                    });
+                    sysStats.value = statsMap;
+                }).catch(e => console.error("Monitor fetch failed", e));
+                
             } catch (err) {
                 alert('Gagal mengambil data dari server Backend.');
                 console.error(err);
@@ -104,15 +136,52 @@ createApp({
             
             loading.value = true;
             try {
-                const res = await fetch('/api/bots/deploy', {
+                const res = await fetch('/api/deploy', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ip })
+                    body: JSON.stringify({ ip: ip, count: 1 })
+                });
+                const data = await res.json();
+                if(res.ok && data.results && data.results.length > 0) {
+                    if (data.results[0].status === 'success') {
+                        deployData.value = data.results[0];
+                        deploySuccess.value = true;
+                    } else {
+                        alert('Gagal Deploy: ' + data.results[0].error);
+                    }
+                } else {
+                    alert('Gagal Deploy: ' + (data.detail || 'Unknown error'));
+                }
+            } catch(e) {
+                alert('Terjadi kesalahan jaringan saat deploy.');
+            } finally {
+                fetchData();
+            }
+        };
+
+        const showBulkDeploy = ref(false);
+        const bulkDeployForm = ref({ ip: '', count: 1, proxies: '', spoof_hw: false });
+        
+        const openBulkDeploy = (ip) => {
+            bulkDeployForm.value = { ip, count: 5, proxies: '', spoof_hw: false };
+            showBulkDeploy.value = true;
+        };
+
+        const submitBulkDeploy = async () => {
+            if(!confirm(`Yakin ingin menanam ${bulkDeployForm.value.count} bot sekaligus ke STB ${bulkDeployForm.value.ip}?`)) return;
+            showBulkDeploy.value = false;
+            loading.value = true;
+            try {
+                const res = await fetch('/api/deploy', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bulkDeployForm.value)
                 });
                 const data = await res.json();
                 if(res.ok) {
-                    deployData.value = data;
-                    deploySuccess.value = true;
+                    let successCount = data.results.filter(r => r.status==='success').length;
+                    let failCount = data.results.filter(r => r.status==='failed').length;
+                    alert(`Bulk Deploy Selesai!\n\nBerhasil: ${successCount}\nGagal: ${failCount}\n\nSilakan cek log masing-masing bot untuk detailnya.`);
                 } else {
                     alert('Gagal Deploy: ' + (data.detail || 'Unknown error'));
                 }
@@ -212,6 +281,7 @@ createApp({
 
         return {
             nodes, botsData, loading, showAddNode, newNode, logModal, deploySuccess, deployData,
+            globalStats, sysStats, showBulkDeploy, bulkDeployForm, openBulkDeploy, submitBulkDeploy,
             fetchData, addNode, removeNode, renameNode, botAction, deployBot, viewLogs, checkIP, restartAllBots, renameBot
         };
     }

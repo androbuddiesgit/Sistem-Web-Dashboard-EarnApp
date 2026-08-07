@@ -51,7 +51,29 @@
             </div>
         </nav>
 
-        <main class="container mx-auto px-4 mt-8">
+        <div class="container mx-auto px-4 mt-8 mb-6">
+            <!-- Global Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass p-4 rounded-xl border border-indigo-500/30 flex items-center gap-4 shadow-lg">
+                    <div class="p-3 bg-indigo-500/20 text-indigo-400 rounded-lg"><i class="ph-fill ph-hard-drives text-2xl"></i></div>
+                    <div><p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Total STB</p><h4 class="text-2xl font-bold">{{ globalStats.stbs }}</h4></div>
+                </div>
+                <div class="glass p-4 rounded-xl border border-blue-500/30 flex items-center gap-4 shadow-lg">
+                    <div class="p-3 bg-blue-500/20 text-blue-400 rounded-lg"><i class="ph-fill ph-robot text-2xl"></i></div>
+                    <div><p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Bots</p><h4 class="text-2xl font-bold">{{ globalStats.bots }}</h4></div>
+                </div>
+                <div class="glass p-4 rounded-xl border border-emerald-500/30 flex items-center gap-4 shadow-lg">
+                    <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-lg"><i class="ph-fill ph-check-circle text-2xl"></i></div>
+                    <div><p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Online</p><h4 class="text-2xl font-bold text-emerald-400">{{ globalStats.online }}</h4></div>
+                </div>
+                <div class="glass p-4 rounded-xl border border-red-500/30 flex items-center gap-4 shadow-lg">
+                    <div class="p-3 bg-red-500/20 text-red-400 rounded-lg"><i class="ph-fill ph-x-circle text-2xl"></i></div>
+                    <div><p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Offline</p><h4 class="text-2xl font-bold text-red-400">{{ globalStats.offline }}</h4></div>
+                </div>
+            </div>
+        </div>
+
+        <main class="container mx-auto px-4 mt-4">
             
             <!-- Nodes Section -->
             <section class="mb-10">
@@ -80,11 +102,40 @@
                                 <i class="ph ph-trash"></i>
                             </button>
                         </div>
-                        <div class="mt-4 pt-4 border-t border-slate-700/50 flex justify-between items-center">
-                            <span class="text-xs font-mono px-2 py-1 bg-slate-800 rounded-md text-slate-300">Port: {{ node.port }}</span>
-                            <button @click="deployBot(node.ip)" class="text-sm px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded-lg transition-colors flex items-center gap-1">
-                                <i class="ph ph-rocket-launch"></i> Auto-Deploy Bot
-                            </button>
+                        <div class="mt-4 pt-4 border-t border-slate-700/50">
+                            <!-- System Monitor -->
+                            <div v-if="sysStats[node.ip]" class="mb-4 grid grid-cols-3 gap-2 text-xs">
+                                <div class="bg-slate-800/50 p-2 rounded border border-slate-700">
+                                    <p class="text-slate-400 mb-1"><i class="ph ph-cpu"></i> CPU</p>
+                                    <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-blue-400 h-full" :style="{width: Math.min(100, parseFloat(sysStats[node.ip].cpu)) + '%'}"></div>
+                                    </div>
+                                    <p class="mt-1 text-right">{{ sysStats[node.ip].cpu }}%</p>
+                                </div>
+                                <div class="bg-slate-800/50 p-2 rounded border border-slate-700">
+                                    <p class="text-slate-400 mb-1"><i class="ph ph-memory"></i> RAM</p>
+                                    <div class="w-full bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-indigo-400 h-full" :style="{width: Math.min(100, parseFloat(sysStats[node.ip].ram)) + '%'}"></div>
+                                    </div>
+                                    <p class="mt-1 text-right">{{ sysStats[node.ip].ram }}%</p>
+                                </div>
+                                <div class="bg-slate-800/50 p-2 rounded border border-slate-700">
+                                    <p class="text-slate-400 mb-1"><i class="ph ph-thermometer"></i> Suhu</p>
+                                    <p class="mt-1 text-lg font-bold" :class="{'text-red-400': parseFloat(sysStats[node.ip].temp) > 70, 'text-emerald-400': parseFloat(sysStats[node.ip].temp) <= 70}">{{ sysStats[node.ip].temp }}°C</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-mono px-2 py-1 bg-slate-800 rounded-md text-slate-300">Port: {{ node.port }}</span>
+                                <div class="flex gap-2">
+                                    <button @click="deployBot(node.ip)" class="text-xs px-3 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded transition-colors" title="Deploy 1 Bot">
+                                        +1 Bot
+                                    </button>
+                                    <button @click="openBulkDeploy(node.ip)" class="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 rounded transition-colors shadow-lg shadow-indigo-900/20" title="Bulk Deploy / Inject Proxy">
+                                        <i class="ph-fill ph-rocket-launch"></i> Tanam Massal
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -230,6 +281,49 @@
                         <div class="pt-4 flex justify-end gap-3">
                             <button type="button" @click="showAddNode = false" class="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">Cancel</button>
                             <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition-colors">Save Node</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Bulk Deploy Modal -->
+        <Transition name="modal">
+            <div v-if="showBulkDeploy" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div class="glass w-full max-w-lg rounded-2xl shadow-2xl border border-slate-600 overflow-hidden">
+                    <div class="p-6 border-b border-slate-700 flex justify-between items-center bg-indigo-900/50">
+                        <h3 class="text-xl font-bold flex items-center gap-2"><i class="ph-fill ph-rocket-launch text-indigo-400"></i> Tanam Massal & Proxy</h3>
+                        <button @click="showBulkDeploy = false" class="text-slate-400 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+                    </div>
+                    <form @submit.prevent="submitBulkDeploy" class="p-6 space-y-4">
+                        <div class="bg-slate-800/50 p-4 rounded-lg border border-slate-700 mb-4">
+                            <p class="text-sm text-slate-300 mb-2">Target STB: <strong class="text-white">{{ bulkDeployForm.ip }}</strong></p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Jumlah Bot yang Ditanam</label>
+                            <input v-model="bulkDeployForm.count" required type="number" min="1" max="50" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-slate-300 mb-1">Daftar Proxy (Opsional, 1 baris per proxy)</label>
+                            <textarea v-model="bulkDeployForm.proxies" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-white font-mono text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="http://user:pass@ip:port&#10;http://user2:pass2@ip2:port2"></textarea>
+                            <p class="text-xs text-slate-500 mt-1">Jika jumlah proxy lebih sedikit dari jumlah bot, proxy akan diulang pemakaiannya.</p>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <input type="checkbox" id="spoof_hw" v-model="bulkDeployForm.spoof_hw" class="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 bg-slate-700 border-slate-600">
+                            <label for="spoof_hw" class="text-sm text-slate-300 cursor-pointer">
+                                <strong class="text-emerald-400"><i class="ph-fill ph-ghost"></i> Aktifkan HW Spoofing (Ternak Siluman)</strong><br>
+                                <span class="text-xs text-slate-500">Memalsukan info CPU & RAM agar bot terlihat sebagai HP/PC berbeda.</span>
+                            </label>
+                        </div>
+                        
+                        <div class="pt-4 flex justify-end gap-3 border-t border-slate-700">
+                            <button type="button" @click="showBulkDeploy = false" class="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">Batal</button>
+                            <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg font-bold transition-colors shadow-lg shadow-indigo-900/50 flex items-center gap-2">
+                                <i class="ph-bold ph-rocket"></i> Tanam Sekarang!
+                            </button>
                         </div>
                     </form>
                 </div>
