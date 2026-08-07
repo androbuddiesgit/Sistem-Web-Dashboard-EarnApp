@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.models import Node, NodeUpdate
 from app.core.db import load_nodes, save_nodes
-from app.core.ssh import run_ssh_command
+from app.core.ssh import execute_ssh
 
 router = APIRouter()
 
@@ -25,13 +25,13 @@ def add_node(node: Node):
     node_dict = node.dict()
     
     # Test SSH connection
-    success, out, err = run_ssh_command(node_dict, "echo 'SSH Connection Successful'")
+    success, out, err = execute_ssh(node_dict['ip'], node_dict['username'], node_dict['password'], node_dict['port'], "echo 'SSH Connection Successful'")
     if not success:
         raise HTTPException(status_code=400, detail=f"Koneksi SSH Gagal: {err}")
         
     # Auto-Fix Network Configuration for Docker (Silent)
     fix_cmd = "sudo sysctl -w net.ipv4.ip_forward=1 && sudo iptables -P FORWARD ACCEPT"
-    run_ssh_command(node_dict, fix_cmd)
+    execute_ssh(node_dict['ip'], node_dict['username'], node_dict['password'], node_dict['port'], fix_cmd)
 
     nodes.append(node_dict)
     save_nodes(nodes)
@@ -62,7 +62,7 @@ def fix_network(req: NodeAction):
         raise HTTPException(status_code=404, detail="Node not found")
     
     cmd = "sudo sysctl -w net.ipv4.ip_forward=1 && sudo iptables -P FORWARD ACCEPT"
-    success, out, err = run_ssh_command(node, cmd)
+    success, out, err = execute_ssh(node['ip'], node['username'], node['password'], node['port'], cmd)
     if not success:
         raise HTTPException(status_code=500, detail=f"Gagal fix network: {err}")
     return {"status": "success", "detail": "Network (IP Forward & iptables) berhasil diperbaiki!"}
