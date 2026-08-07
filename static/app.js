@@ -7,7 +7,7 @@ createApp({
         const loading = ref(false);
         const showAddNode = ref(false);
         
-        const newNode = ref({ ip: '', port: 22, username: 'root', password: '' });
+        const newNode = ref({ ip: '', port: 22, username: 'root', password: '', name: '' });
         
         const logModal = ref({ show: false, loading: false, ip: '', container: '', logs: '' });
         
@@ -40,7 +40,7 @@ createApp({
                 });
                 if(res.ok) {
                     showAddNode.value = false;
-                    newNode.value = { ip: '', port: 22, username: 'root', password: '' };
+                    newNode.value = { ip: '', port: 22, username: 'root', password: '', name: '' };
                     fetchData();
                 } else {
                     const data = await res.json();
@@ -145,13 +145,54 @@ createApp({
             }
         };
 
+        const restartAllBots = async (ip) => {
+            if(!confirm(`Restart SEMUA bot di STB ${ip}?`)) return;
+            loading.value = true;
+            try {
+                const res = await fetch('/api/bots/restart_all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip })
+                });
+                if (!res.ok) alert((await res.json()).detail || 'Failed to restart all');
+            } catch(e) {
+                alert('Network error');
+            } finally {
+                fetchData();
+            }
+        };
+
+        const renameBot = async (ip, old_name) => {
+            const new_name = prompt(`Masukkan nama baru untuk bot ${old_name}:\n(Hanya huruf, angka, garis bawah, dan strip)`, old_name);
+            if (!new_name || new_name === old_name) return;
+            
+            if (!/^[a-zA-Z0-9_-]+$/.test(new_name)) {
+                alert('Format nama tidak valid! Hanya huruf, angka, _, dan - yang diperbolehkan.');
+                return;
+            }
+
+            loading.value = true;
+            try {
+                const res = await fetch('/api/bots/rename', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip, old_name, new_name })
+                });
+                if (!res.ok) alert((await res.json()).detail || 'Failed to rename');
+            } catch(e) {
+                alert('Network error');
+            } finally {
+                fetchData();
+            }
+        };
+
         onMounted(() => {
             fetchData();
         });
 
         return {
             nodes, botsData, loading, showAddNode, newNode, logModal, deploySuccess, deployData,
-            fetchData, addNode, removeNode, botAction, deployBot, viewLogs, checkIP
+            fetchData, addNode, removeNode, botAction, deployBot, viewLogs, checkIP, restartAllBots, renameBot
         };
     }
 }).mount('#app');

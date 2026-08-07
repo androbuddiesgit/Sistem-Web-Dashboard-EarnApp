@@ -19,6 +19,7 @@ class Node(BaseModel):
     username: str
     password: str
     port: int = 22
+    name: Optional[str] = None
 
 class ActionReq(BaseModel):
     ip: str
@@ -27,6 +28,14 @@ class ActionReq(BaseModel):
 
 class DeployReq(BaseModel):
     ip: str
+
+class RestartAllReq(BaseModel):
+    ip: str
+
+class RenameReq(BaseModel):
+    ip: str
+    old_name: str
+    new_name: str
 
 def load_nodes():
     if not os.path.exists(NODES_FILE):
@@ -84,7 +93,7 @@ def remove_node(ip: str):
     return {"message": "Node removed"}
 
 async def fetch_bots_from_node(node):
-    cmd = """docker ps -a --format '{"id":"{{.ID}}", "name":"{{.Names}}", "status":"{{.Status}}", "state":"{{.State}}"}' | grep 'earnapp_' || true"""
+    cmd = """docker ps -a --format '{"id":"{{.ID}}", "name":"{{.Names}}", "status":"{{.Status}}", "state":"{{.State}}"}' --filter "ancestor=fazalfarhan01/earnapp:lite" """
     loop = asyncio.get_event_loop()
     success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
     bots = []
@@ -126,7 +135,7 @@ async def bot_action(req: ActionReq):
         raise HTTPException(status_code=400, detail="Invalid action")
         
     # Prevent shell injection
-    if not re.match(r'^earnapp_[0-9]+$', req.container_name):
+    if not re.match(r'^[a-zA-Z0-9_-]+$', req.container_name):
         raise HTTPException(status_code=400, detail="Invalid container name")
 
     loop = asyncio.get_event_loop()
@@ -159,15 +168,7 @@ async def deploy_bot(req: DeployReq):
     if "ok" not in out.lower():
         raise HTTPException(status_code=500, detail=f"Registration failed: {out} {err}")
 
-    # Determine next container name
-    find_cmd = "docker ps -a --format '{{.Names}}' | grep '^earnapp_' | sed 's/earnapp_//' | sort -n | tail -1"
-    succ2, out2, err2 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], find_cmd)
-    
-    next_id = 1
-    if succ2 and out2.strip().isdigit():
-        next_id = int(out2.strip()) + 1
-        
-    container_name = f"earnapp_{next_id}"
+    container_name = f"earnapp_{rand_hex[:6]}"
 
     # Auto-Fix Armbian Network (IP Forwarding & NAT Masquerade) agar Bridge mode Docker bisa internetan
     fix_net_cmd = "sysctl -w net.ipv4.ip_forward=1 && iptables -P FORWARD ACCEPT && iptables -t nat -C POSTROUTING -j MASQUERADE || iptables -t nat -A POSTROUTING -j MASQUERADE"
@@ -187,6 +188,37 @@ async def deploy_bot(req: DeployReq):
     else:
         raise HTTPException(status_code=500, detail=f"Docker run failed: {out3} {err3}")
 
+@app.post("/api/bots/restart_all")
+async def restart_all_bots(req: RestartAllReq):
+    nodes = load_nodes()
+    node = next((n for n in nodes if n['ip'] == req.ip), None)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+        
+    cmd = "docker restart $(docker ps -a -q --filter 'ancestor=fazalfarhan01/earnapp:lite') || true"
+    loop = asyncio.get_event_loop()
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
+    return {"message": "Restart all initiated", "output": out or err}
+
+@app.post("/api/bots/rename")
+async def rename_bot(req: RenameReq):
+    nodes = load_nodes()
+    node = next((n for n in nodes if n['ip'] == req.ip), None)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+        
+    if not re.match(r'^[a-zA-Z0-9_-]+$', req.old_name) or not re.match(r'^[a-zA-Z0-9_-]+$', req.new_name):
+        raise HTTPException(status_code=400, detail="Invalid container name format")
+        
+    cmd = f"docker rename {req.old_name} {req.new_name}"
+    loop = asyncio.get_event_loop()
+    success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
+    
+    if success:
+        return {"message": "Rename successful"}
+    else:
+        raise HTTPException(status_code=500, detail=f"Rename failed: {out or err}")
+
 @app.get("/api/bots/logs")
 async def get_logs(ip: str, container_name: str):
     nodes = load_nodes()
@@ -194,7 +226,7 @@ async def get_logs(ip: str, container_name: str):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
         
-    if not re.match(r'^earnapp_[0-9]+$', container_name):
+    if not re.match(r'^[a-zA-Z0-9_-]+$', container_name):
         raise HTTPException(status_code=400, detail="Invalid container name")
         
     cmd = f"docker logs --tail 50 {container_name}"
@@ -213,7 +245,7 @@ async def get_bot_ip(ip: str, container_name: str):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
         
-    if not re.match(r'^earnapp_[0-9]+$', container_name):
+    if not re.match(r'^[a-zA-Z0-9_-]+$', container_name):
         raise HTTPException(status_code=400, detail="Invalid container name")
         
     loop = asyncio.get_event_loop()
