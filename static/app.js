@@ -57,6 +57,26 @@ createApp({
             fetchData();
         };
 
+        const renameNode = async (ip, old_name) => {
+            const new_name = prompt(`Masukkan nama baru untuk STB ${ip}:`, old_name || '');
+            if (new_name === null || new_name === old_name) return;
+            
+            try {
+                const res = await fetch(`/api/nodes/${ip}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: new_name })
+                });
+                if(res.ok) {
+                    fetchData();
+                } else {
+                    alert('Gagal mengganti nama node');
+                }
+            } catch(e) {
+                alert('Network error');
+            }
+        };
+
         const botAction = async (ip, action, container_name) => {
             let msg = `Yakin ingin melakukan action '${action}' pada bot ${container_name}?`;
             if (action === 'rm -f') msg = `BAHAYA: Yakin ingin MENGHAPUS bot ${container_name}? Anda harus mendaftarkan ulang UUID jika ingin memakainya lagi.`;
@@ -192,7 +212,7 @@ createApp({
 
         return {
             nodes, botsData, loading, showAddNode, newNode, logModal, deploySuccess, deployData,
-            fetchData, addNode, removeNode, botAction, deployBot, viewLogs, checkIP, restartAllBots, renameBot
+            fetchData, addNode, removeNode, renameNode, botAction, deployBot, viewLogs, checkIP, restartAllBots, renameBot
         };
     }
 }).mount('#app');

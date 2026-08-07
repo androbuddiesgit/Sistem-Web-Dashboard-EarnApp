@@ -67,7 +67,12 @@
                         <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500 opacity-10 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
                         <div class="flex justify-between items-start">
                             <div>
-                                <h3 class="text-lg font-bold">{{ node.name || node.ip }}</h3>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-lg font-bold">{{ node.name || node.ip }}</h3>
+                                    <button @click="renameNode(node.ip, node.name)" class="text-indigo-400 hover:text-indigo-300 transition-colors p-1" title="Rename STB">
+                                        <i class="ph-fill ph-pencil-simple"></i>
+                                    </button>
+                                </div>
                                 <p v-if="node.name" class="text-slate-400 text-sm"><i class="ph ph-hard-drive"></i> {{ node.ip }}</p>
                                 <p class="text-slate-400 text-sm"><i class="ph ph-user"></i> {{ node.username }}</p>
                             </div>

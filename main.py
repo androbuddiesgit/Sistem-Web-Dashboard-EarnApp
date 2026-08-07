@@ -21,6 +21,9 @@ class Node(BaseModel):
     port: int = 22
     name: Optional[str] = None
 
+class NodeUpdate(BaseModel):
+    name: str
+
 class ActionReq(BaseModel):
     ip: str
     action: str
@@ -91,6 +94,16 @@ def remove_node(ip: str):
     nodes = [n for n in nodes if n['ip'] != ip]
     save_nodes(nodes)
     return {"message": "Node removed"}
+
+@app.put("/api/nodes/{ip}")
+def update_node(ip: str, update: NodeUpdate):
+    nodes = load_nodes()
+    for n in nodes:
+        if n['ip'] == ip:
+            n['name'] = update.name
+            save_nodes(nodes)
+            return {"message": "Node updated"}
+    raise HTTPException(status_code=404, detail="Node not found")
 
 async def fetch_bots_from_node(node):
     cmd = """docker ps -a --format '{"id":"{{.ID}}", "name":"{{.Names}}", "status":"{{.Status}}", "state":"{{.State}}"}' --filter "ancestor=fazalfarhan01/earnapp:lite" """
