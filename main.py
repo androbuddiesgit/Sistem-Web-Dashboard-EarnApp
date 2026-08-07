@@ -169,7 +169,7 @@ async def deploy_bot(req: DeployReq):
     container_name = f"earnapp_{next_id}"
 
     # Run Docker Container
-    run_cmd = f"docker run -d --restart always --network host -e EARNAPP_UUID={uid} --name {container_name} fazalfarhan01/earnapp:lite"
+    run_cmd = f"docker run -d --restart always --dns 8.8.8.8 --dns 1.1.1.1 -e EARNAPP_UUID={uid} --name {container_name} fazalfarhan01/earnapp:lite"
     succ3, out3, err3 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], run_cmd)
 
     if succ3:
