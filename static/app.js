@@ -123,6 +123,28 @@ createApp({
             }
         };
 
+        const fixNetwork = async (ip) => {
+            if(!confirm(`Jalankan Fix Network (IP Forward & Iptables) pada STB ${ip}?\nGunakan ini jika bot gagal mendapatkan IP/Koneksi Internet.`)) return;
+            loading.value = true;
+            try {
+                const res = await fetch('/api/nodes/fix_network', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip })
+                });
+                const data = await res.json();
+                if(res.ok) {
+                    alert(data.detail);
+                } else {
+                    alert('Gagal: ' + data.detail);
+                }
+            } catch(e) {
+                alert('Network error');
+            } finally {
+                fetchData();
+            }
+        };
+
         const botAction = async (ip, action, container_name) => {
             let msg = `Yakin ingin melakukan action '${action}' pada bot ${container_name}?`;
             if (action === 'rm -f') msg = `BAHAYA: Yakin ingin MENGHAPUS bot ${container_name}? Anda harus mendaftarkan ulang UUID jika ingin memakainya lagi.`;
@@ -300,7 +322,7 @@ createApp({
             nodes, botsData, loading, showAddNode, newNode, logModal, deploySuccess, deployData,
             globalStats, sysStats, showBulkDeploy, bulkDeployForm, openBulkDeploy, submitBulkDeploy,
             showWelcome, closeWelcome, openRef,
-            fetchData, addNode, removeNode, renameNode, botAction, deployBot, viewLogs, checkIP, restartAllBots, renameBot
+            fetchData, addNode, removeNode, renameNode, fixNetwork, botAction, deployBot, viewLogs, checkIP, restartAllBots, renameBot
         };
     }
 }).mount('#app');

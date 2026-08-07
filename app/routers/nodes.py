@@ -1,8 +1,13 @@
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from app.models import Node, NodeUpdate
 from app.core.db import load_nodes, save_nodes
+from app.core.ssh import run_ssh_command
 
 router = APIRouter()
+
+class NodeAction(BaseModel):
+    ip: str
 
 @router.get("")
 def get_nodes():
@@ -37,3 +42,16 @@ def update_node(ip: str, update: NodeUpdate):
             save_nodes(nodes)
             return {"message": "Node updated"}
     raise HTTPException(status_code=404, detail="Node not found")
+
+@router.post("/fix_network")
+def fix_network(req: NodeAction):
+    nodes = load_nodes()
+    node = next((n for n in nodes if n['ip'] == req.ip), None)
+    if not node:
+        raise HTTPException(status_code=404, detail="Node not found")
+    
+    cmd = "sudo sysctl -w net.ipv4.ip_forward=1 && sudo iptables -P FORWARD ACCEPT"
+    success, out, err = run_ssh_command(node, cmd)
+    if not success:
+        raise HTTPException(status_code=500, detail=f"Gagal fix network: {err}")
+    return {"status": "success", "detail": "Network (IP Forward & iptables) berhasil diperbaiki!"}

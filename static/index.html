@@ -131,10 +131,13 @@
                             <div class="flex justify-between items-center">
                                 <span class="text-xs font-mono px-2 py-1 bg-slate-800 rounded-md text-slate-300">Port: {{ node.port }}</span>
                                 <div class="flex gap-2">
-                                    <button @click="deployBot(node.ip)" class="text-xs px-3 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded transition-colors" title="Deploy 1 Bot">
+                                    <button @click="fixNetwork(node.ip)" class="text-xs px-2 py-1.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 rounded transition-colors" title="Fix IP Forward & Iptables">
+                                        <i class="ph-fill ph-wrench"></i> Fix Net
+                                    </button>
+                                    <button @click="deployBot(node.ip)" class="text-xs px-2 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 rounded transition-colors" title="Deploy 1 Bot">
                                         +1 Bot
                                     </button>
-                                    <button @click="openBulkDeploy(node.ip)" class="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 rounded transition-colors shadow-lg shadow-indigo-900/20" title="Bulk Deploy / Inject Proxy">
+                                    <button @click="openBulkDeploy(node.ip)" class="text-xs px-2 py-1.5 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30 rounded transition-colors shadow-lg shadow-indigo-900/20" title="Bulk Deploy / Inject Proxy">
                                         <i class="ph-fill ph-rocket-launch"></i> Tanam Massal
                                     </button>
                                 </div>
