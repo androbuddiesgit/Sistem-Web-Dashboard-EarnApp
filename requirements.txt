@@ -1,4 +1,4 @@
-fastapi
-uvicorn
-paramiko
-pydantic
+fastapi==0.95.2
+uvicorn==0.22.0
+pydantic==1.10.12
+paramiko==3.4.0

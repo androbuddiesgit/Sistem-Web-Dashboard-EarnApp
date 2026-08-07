@@ -14,7 +14,7 @@ async def deploy_bot_bulk(req: DeployBulkReq):
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     
     # Parse proxies
     proxy_list = [p.strip() for p in req.proxies.splitlines() if p.strip()]
@@ -50,22 +50,27 @@ async def deploy_bot_bulk(req: DeployBulkReq):
 
         container_name = f"earnapp_{rand_hex[:6]}"
         
-        docker_run_args = ["-d", "--restart always", "--network host", f"-e EARNAPP_UUID={uid}", f"--name {container_name}"]
+        docker_run_args = ["-d", "--restart always", f"-e EARNAPP_UUID={uid}", f"--name {container_name}"]
         
         # Inject Proxy
         if proxy_list:
             proxy = proxy_list[i]
-            docker_run_args.append(f"-e HTTP_PROXY={proxy} -e HTTPS_PROXY={proxy}")
+            docker_run_args.append("--network bridge")
+            docker_run_args.append(f"-e HTTP_PROXY={proxy}")
+            docker_run_args.append(f"-e HTTPS_PROXY={proxy}")
+        else:
+            docker_run_args.append("--network host")
             
         # Inject Fake HW
         if req.spoof_hw:
             cpu_file = f"{fake_hw_base}/cpuinfo_{rand_hex[:6]}"
             mem_file = f"{fake_hw_base}/meminfo_{rand_hex[:6]}"
             # Generate fake files
-            fake_cpu = f"echo -e 'processor\\t: 0\\nmodel name\\t: ARM Cortex-A72 r0p3\\nBogoMIPS\\t: {100 + i}.00\\nFeatures\\t: fp asimd evtstrm crc32 cpuid' > {cpu_file}"
-            fake_mem = f"echo -e 'MemTotal:\\t4048576 kB\\nMemFree:\\t1024000 kB' > {mem_file}"
+            fake_cpu = f"printf 'processor\\t: 0\\nmodel name\\t: ARM Cortex-A72 r0p3\\nBogoMIPS\\t: {100 + i}.00\\nFeatures\\t: fp asimd evtstrm crc32 cpuid\\n' > {cpu_file}"
+            fake_mem = f"printf 'MemTotal:\\t4048576 kB\\nMemFree:\\t1024000 kB\\n' > {mem_file}"
             await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], f"{fake_cpu} && {fake_mem}")
-            docker_run_args.append(f"-v {cpu_file}:/proc/cpuinfo -v {mem_file}:/proc/meminfo")
+            docker_run_args.append(f"-v {cpu_file}:/proc/cpuinfo")
+            docker_run_args.append(f"-v {mem_file}:/proc/meminfo")
             
         run_cmd = f"docker run {' '.join(docker_run_args)} fazalfarhan01/earnapp:lite"
         succ3, out3, err3 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], run_cmd)

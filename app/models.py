@@ -1,11 +1,11 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field, validator
+from typing import Optional
 
 class Node(BaseModel):
     ip: str
     username: str
     password: str
-    port: int = 22
+    port: int = Field(default=22, ge=1, le=65535)
     name: Optional[str] = None
 
 class NodeUpdate(BaseModel):
@@ -18,9 +18,16 @@ class ActionReq(BaseModel):
 
 class DeployBulkReq(BaseModel):
     ip: str
-    count: int = 1
+    count: int = Field(default=1, ge=1, le=50)
     proxies: str = ""
     spoof_hw: bool = False
+
+    @validator('proxies')
+    def validate_proxies(cls, v):
+        import re
+        if not re.match(r'^[\w\.\:\/\@\-]*$', v):
+            raise ValueError("Invalid characters in proxies")
+        return v
 
 class RestartAllReq(BaseModel):
     ip: str

@@ -39,7 +39,14 @@ createApp({
                 
                 // Fetch bots
                 const resBots = await fetch('/api/bots');
-                botsData.value = await resBots.json();
+                const botsRaw = await resBots.json();
+                botsRaw.forEach(stb => {
+                    stb.bots.forEach(bot => {
+                        bot.ip_loading = false;
+                        bot.public_ip = null;
+                    });
+                });
+                botsData.value = botsRaw;
                 
                 // Calculate Global Stats
                 let totalBots = 0;
@@ -99,8 +106,14 @@ createApp({
 
         const removeNode = async (ip) => {
             if(!confirm(`Hapus node ${ip}?`)) return;
-            await fetch(`/api/nodes/${ip}`, { method: 'DELETE' });
-            fetchData();
+            try {
+                const res = await fetch(`/api/nodes/${ip}`, { method: 'DELETE' });
+                if (!res.ok) alert('Gagal menghapus node');
+            } catch(e) {
+                alert('Network error');
+            } finally {
+                fetchData();
+            }
         };
 
         const renameNode = async (ip, old_name) => {
@@ -124,8 +137,7 @@ createApp({
         };
 
         const fixNetwork = async (ip) => {
-            if(!confirm(`Jalankan Fix Network (IP Forward & Iptables) pada STB ${ip}?\nGunakan ini jika bot gagal mendapatkan IP/Koneksi Internet.`)) return;
-            loading.value = true;
+            if(!confirm(`Jalankan Fix Network...`)) return;
             try {
                 const res = await fetch('/api/nodes/fix_network', {
                     method: 'POST',
@@ -140,8 +152,6 @@ createApp({
                 }
             } catch(e) {
                 alert('Network error');
-            } finally {
-                fetchData();
             }
         };
 
@@ -162,7 +172,7 @@ createApp({
                     const err = await res.json();
                     alert(err.detail);
                 }
-            } finally {
+            } catch(e) { alert('Network error: ' + e.message); } finally {
                 fetchData();
             }
         };
@@ -180,7 +190,7 @@ createApp({
                 const data = await res.json();
                 if(res.ok && data.results && data.results.length > 0) {
                     if (data.results[0].status === 'success') {
-                        deployData.value = data.results[0];
+                        deployData.value = { ...data.results[0], ip };
                         deploySuccess.value = true;
                     } else {
                         alert('Gagal Deploy: ' + data.results[0].error);
@@ -231,7 +241,7 @@ createApp({
         const viewLogs = async (ip, container_name) => {
             logModal.value = { show: true, loading: true, ip, container: container_name, logs: '' };
             try {
-                const res = await fetch(`/api/bots/logs?ip=${ip}&container_name=${container_name}`);
+                const res = await fetch(`/api/bots/logs?ip=${encodeURIComponent(ip)}&container_name=${encodeURIComponent(container_name)}`);
                 const data = await res.json();
                 if(res.ok) {
                     logModal.value.logs = data.logs || 'No logs available.';
@@ -252,7 +262,7 @@ createApp({
                             bot.ip_loading = true;
                             bot.public_ip = null;
                             try {
-                                const res = await fetch(`/api/bots/ip?ip=${ip}&container_name=${container_name}`);
+                                const res = await fetch(`/api/bots/ip?ip=${encodeURIComponent(ip)}&container_name=${encodeURIComponent(container_name)}`);
                                 const data = await res.json();
                                 if (res.ok) {
                                     bot.public_ip = data.public_ip;
@@ -280,6 +290,7 @@ createApp({
                     body: JSON.stringify({ ip })
                 });
                 if (!res.ok) alert((await res.json()).detail || 'Failed to restart all');
+                else { alert('Semua bot berhasil di-restart!'); }
             } catch(e) {
                 alert('Network error');
             } finally {
@@ -316,6 +327,7 @@ createApp({
                 showWelcome.value = true;
             }
             fetchData();
+            setInterval(fetchData, 30000);
         });
 
         return {

@@ -14,7 +14,7 @@ async def get_system_monitor():
         # 2. RAM Usage (from free -m)
         # 3. Temp (from /sys/class/thermal/thermal_zone0/temp)
         cmd = """
-        echo "CPU: $(top -bn1 | grep load | awk '{printf "%.2f", $(NF-2)}')"
+        echo "CPU: $(grep 'cpu ' /proc/stat | awk '{usage=($2+$4)*100/($2+$4+$5)} END {printf \"%.1f\", usage}')"
         echo "RAM: $(free -m | awk 'NR==2{printf "%.2f", $3*100/$2 }')"
         if [ -f /sys/class/thermal/thermal_zone0/temp ]; then
             echo "TEMP: $(awk '{print $1/1000}' /sys/class/thermal/thermal_zone0/temp)"
@@ -22,7 +22,7 @@ async def get_system_monitor():
             echo "TEMP: N/A"
         fi
         """
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
         
         data = {"cpu": "0", "ram": "0", "temp": "N/A"}
