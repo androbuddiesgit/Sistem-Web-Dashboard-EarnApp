@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from app.models import Node, NodeUpdate
 from app.core.db import load_nodes, save_nodes
 from app.core.ssh import execute_ssh
+from app.core.crypto import encrypt_value, decrypt_value
+from app.core.logger import log_action
 
 router = APIRouter()
 
@@ -32,6 +34,9 @@ def add_node(node: Node):
     # Auto-Fix Network Configuration for Docker (Silent)
     fix_cmd = "sudo sysctl -w net.ipv4.ip_forward=1 && sudo iptables -P FORWARD ACCEPT"
     execute_ssh(node_dict['ip'], node_dict['username'], node_dict['password'], node_dict['port'], fix_cmd)
+    
+    node_dict['password'] = encrypt_value(node_dict['password'])
+    log_action('ADD_NODE', f'Added node {node_dict["ip"]}', node_dict['ip'])
 
     nodes.append(node_dict)
     save_nodes(nodes)
@@ -42,6 +47,7 @@ def remove_node(ip: str):
     nodes = load_nodes()
     nodes = [n for n in nodes if n['ip'] != ip]
     save_nodes(nodes)
+    log_action('REMOVE_NODE', f'Removed node {ip}', ip)
     return {"message": "Node removed"}
 
 @router.put("/{ip}")
@@ -62,7 +68,8 @@ def fix_network(req: NodeAction):
         raise HTTPException(status_code=404, detail="Node not found")
     
     cmd = "sudo sysctl -w net.ipv4.ip_forward=1 && sudo iptables -P FORWARD ACCEPT"
-    success, out, err = execute_ssh(node['ip'], node['username'], node['password'], node['port'], cmd)
+    decrypted_pw = decrypt_value(node['password'])
+    success, out, err = execute_ssh(node['ip'], node['username'], decrypted_pw, node['port'], cmd)
     if not success:
         raise HTTPException(status_code=500, detail=f"Gagal fix network: {err}")
     return {"status": "success", "detail": "Network (IP Forward & iptables) berhasil diperbaiki!"}

@@ -1,50 +1,105 @@
-# EarnApp Cluster Dashboard V2 Master
+# EarnApp Cluster Dashboard V3 — Sultan Edition 👑
 
-Sistem Manajemen Terpusat (Master Node) berbasis Web untuk memantau dan mengendalikan banyak bot Docker EarnApp yang tersebar di berbagai STB (Set-Top Box) Armbian dalam satu jaringan rumah. Dilengkapi dengan antarmuka **Glassmorphism** modern, pemantauan *real-time*, dan sistem Bypass API tingkat tinggi.
+Sistem Manajemen Terpusat (Master Node) berbasis Web untuk memantau dan mengendalikan banyak bot Docker EarnApp yang tersebar di berbagai STB (Set-Top Box) Armbian dalam satu jaringan rumah. Dilengkapi dengan antarmuka **Glassmorphism** ultra-premium, sistem keamanan berlapis, dan fitur-fitur canggih tingkat enterprise.
 
-## 🚀 Fitur Baru di V2 (Mega Update)
+## 🚀 Fitur Lengkap
 
-- **Modular Backend:** Dibangun menggunakan struktur FastAPI yang bersih dan ringan agar penggunaan CPU/RAM di STB master tetap hemat.
-- **Global Analytics Dashboard:** Lihat total STB, bot berjalan, bot berhenti, dan node mati dalam satu layar raksasa.
-- **Hardware System Monitor:** Pemantauan Suhu (Temperature), RAM, dan CPU STB secara *real-time* langsung dari Dashboard.
-- **Bulk Deploy & Proxy Injection (Tanam Massal):** Membuat puluhan kontainer bot sekaligus dalam sekali klik dan langsung menyuntikkan `HTTP_PROXY` yang berbeda-beda untuk tiap bot.
-- **Ternak Siluman (Hardware Spoofing):** Mengelabui server EarnApp dengan menyuntikkan file `/proc/cpuinfo` dan `/proc/meminfo` palsu (virtual) ke dalam kontainer.
-- **Auto-Fix Network:** Memperbaiki masalah STB *no internet* akibat bug Docker di Armbian (`ip_forward=1` & `iptables ACCEPT`) otomatis atau via tombol "Fix Net".
-- **Dynamic Port:** Port bisa diatur sesuka hati via parameter `--port` agar tidak bentrok dengan Mikrotik/Panel lain.
-- **Sponsor/Referral Anti-Kiddies:** Dilengkapi *Welcome Modal* untuk mencari *referral* baru dengan link terenkripsi (Anti *Inspect Element*).
-- **Mobile-First Responsive:** Tampilan Web sangat cantik, bisa dibuka dari PC, Laptop, maupun *Smartphone*.
-- **Remote Action:** Ganti Nama STB, Ganti Nama Bot, Restart Semua Bot, Hapus Bot (rm -f), dan Live Logs Viewer.
+### 🔒 Keamanan
+- **Login Password:** Dashboard dilindungi sistem login. Password default: `admin` (wajib diganti setelah login pertama).
+- **Enkripsi Fernet:** Semua password SSH STB dienkripsi menggunakan algoritma *Fernet* (AES-128-CBC) sebelum disimpan. Tidak ada lagi password mentah di `nodes.json`.
+- **Cookie Auth:** Sesi login menggunakan token acak yang disimpan di HTTPOnly cookie.
 
-## 💻 Panduan Instalasi (Untuk STB Master)
+### 📊 Pemantauan Real-Time
+- **Global Analytics:** Total STB, bot aktif, bot berhenti, dan node offline dalam satu layar.
+- **System Monitor:** CPU (%), RAM (%), dan Suhu STB secara *real-time*.
+- **Auto-Refresh:** Dashboard memperbarui data setiap 30 detik secara otomatis.
+- **Earnings Estimator:** Perkiraan pendapatan harian & bulanan berdasarkan jumlah bot aktif.
 
-Anda hanya perlu menginstal Dashboard ini di **satu STB saja** (sebagai Master). STB bawahan (budak) lainnya tidak perlu diinstal apa-apa, cukup dihubungkan via IP dan SSH Password melalui tampilan Web Master.
+### 🚀 Deployment & Manipulasi
+- **1-Click Deploy:** Tanam bot EarnApp baru dengan UUID otomatis dan *Force API Registration*.
+- **Tanam Massal (Bulk Deploy):** Buat puluhan bot sekaligus dalam sekali klik.
+- **Proxy Injection:** Suntikkan `HTTP_PROXY` berbeda-beda untuk setiap bot.
+- **Ternak Siluman (HW Spoofing):** Kelabui server EarnApp dengan `/proc/cpuinfo` dan `/proc/meminfo` palsu.
+- **Auto-Fix Network:** Perbaiki masalah Docker di Armbian (`ip_forward` & `iptables`) otomatis saat tambah STB atau via tombol.
 
-Jalankan perintah ajaib ini di terminal STB Master Anda:
+### 🎨 Antarmuka Premium
+- **Glassmorphism Dark Theme:** Desain web ultra-premium dengan efek kaca dan gradien dinamis.
+- **Toast Notification:** Notifikasi elegan di pojok kanan bawah (bukan popup `alert()` jelek).
+- **Glassmorphism Confirm Modal:** Dialog konfirmasi cantik bergaya kaca untuk aksi berbahaya.
+- **Per-Bot Loading:** Spinner hanya muncul di baris bot yang sedang diproses, bukan seluruh tabel.
+- **Mobile Responsive:** Tampilan menyesuaikan otomatis di HP, tablet, dan PC.
+- **Bahasa Indonesia:** Seluruh antarmuka dalam Bahasa Indonesia yang konsisten.
+
+### 🔧 Manajemen & Utilitas
+- **Remote Control:** Start, Stop, Restart, Hapus, dan Ganti Nama bot dari jarak jauh.
+- **Restart All Bots:** Restart semua bot di satu STB dalam sekali klik.
+- **Live Log Viewer:** Pantau output terminal dari masing-masing bot.
+- **Cek IP Publik:** Lihat IP publik yang digunakan setiap bot.
+- **Ganti Nama STB & Bot:** Beri label pada setiap STB dan bot untuk manajemen yang rapi.
+
+### 📡 Notifikasi & Backup
+- **Telegram Bot Alert:** Kirim notifikasi ke Telegram saat ada bot mati atau STB offline.
+- **Export/Import Config:** Backup dan restore konfigurasi `nodes.json` langsung dari Dashboard.
+- **Activity Log:** Riwayat lengkap semua aktivitas (deploy, restart, hapus, dll).
+
+### 🛡️ Sponsor & Referral
+- **Welcome Modal:** Layar sambutan untuk pengguna baru dengan link referral.
+- **Anti-Kiddies Obfuscation:** Link referral dienkripsi agar tidak bisa diganti oleh pengguna nakal.
+
+## 💻 Panduan Instalasi
+
+Jalankan perintah ini di **satu STB Master** saja:
 
 ```bash
 wget -qO- https://raw.githubusercontent.com/androbuddiesgit/Sistem-Web-Dashboard-EarnApp/main/install.sh > /tmp/install.sh && sudo bash /tmp/install.sh
 ```
 
-## 🛠️ Cara Mengakses Web Dashboard
+STB bawahan tidak perlu diinstal apa-apa. Cukup hubungkan via IP dan SSH Password melalui Dashboard.
 
-Secara *default*, Web Dashboard berjalan di port `8000`. Buka *browser* dan kunjungi:
-`http://<IP_STB_MASTER>:8000` 
-*(Contoh: `http://192.168.1.10:8000`)*
+## 🛠️ Cara Mengakses
+
+Buka browser dan kunjungi:
+```
+http://<IP_STB_MASTER>:8080
+```
+Contoh: `http://192.168.1.10:8080`
+
+**Login default:**
+- Password: `admin`
+- ⚠️ **Segera ganti password** melalui menu Pengaturan (ikon ⚙️ di navbar).
 
 ### Mengganti Port (Opsional)
-Jika port 8000 bentrok dengan aplikasi lain, edit file *service*:
 ```bash
 sudo nano /etc/systemd/system/earnapp-dashboard.service
-```
-Pada bagian `ExecStart`, tambahkan `--port 8080` di akhir baris:
-```ini
-ExecStart=/usr/bin/python3 /opt/earnapp-dashboard/main.py --port 8080
-```
-Lalu simpan dan *restart* sistem:
-```bash
+# Ubah --port 8080 menjadi port yang diinginkan
 sudo systemctl daemon-reload
 sudo systemctl restart earnapp-dashboard
 ```
 
-## 📸 Antarmuka V2.0 Glassmorphism
-Sistem ini menggunakan desain web ultra-premium bergaya **Glassmorphism** dengan bantuan *Vue.js 3* dan *Tailwind CSS*. Sangat memanjakan mata, enteng, dan responsif.
+## 📁 Struktur Proyek
+
+```
+earnapp-dashboard/
+├── main.py                    # Entry point FastAPI + Auth Middleware
+├── requirements.txt           # Dependencies (pinned versions)
+├── install.sh                 # Auto-installer untuk Armbian
+├── .gitignore
+├── app/
+│   ├── models.py              # Pydantic models
+│   ├── core/
+│   │   ├── auth.py            # Login, token, password management
+│   │   ├── crypto.py          # Fernet encryption/decryption
+│   │   ├── db.py              # Thread-safe JSON database
+│   │   ├── logger.py          # Activity log writer
+│   │   └── ssh.py             # SSH command executor
+│   └── routers/
+│       ├── auth.py            # Login/Logout/Change Password API
+│       ├── bots.py            # Bot management API
+│       ├── deploy.py          # Bulk deploy + proxy + spoofing API
+│       ├── monitor.py         # System monitor API
+│       ├── nodes.py           # STB node management API
+│       └── settings.py        # Telegram, Export/Import, Earnings API
+└── static/
+    ├── index.html             # Frontend UI (Vue 3 + Tailwind)
+    └── app.js                 # Frontend logic
+```

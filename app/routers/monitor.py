@@ -2,6 +2,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 from app.core.db import load_nodes
 from app.core.ssh import execute_ssh
+from app.core.crypto import decrypt_value
 
 router = APIRouter()
 
@@ -23,7 +24,7 @@ async def get_system_monitor():
         fi
         """
         loop = asyncio.get_running_loop()
-        success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], cmd)
+        success, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], decrypt_value(node['password']), node['port'], cmd)
         
         data = {"cpu": "0", "ram": "0", "temp": "N/A"}
         if success and out:

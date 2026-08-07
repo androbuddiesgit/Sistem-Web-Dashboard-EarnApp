@@ -36,3 +36,14 @@ class RenameReq(BaseModel):
     ip: str
     old_name: str
     new_name: str
+
+class LoginReq(BaseModel):
+    password: str
+
+class ChangePasswordReq(BaseModel):
+    old_password: str
+    new_password: str
+
+class TelegramConfig(BaseModel):
+    bot_token: str = ''
+    chat_id: str = ''

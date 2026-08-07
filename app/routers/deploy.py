@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException
 from app.models import DeployBulkReq
 from app.core.db import load_nodes
 from app.core.ssh import execute_ssh
+from app.core.crypto import decrypt_value
+from app.core.logger import log_action
 
 router = APIRouter()
 
@@ -28,7 +30,7 @@ async def deploy_bot_bulk(req: DeployBulkReq):
     fake_hw_base = "/tmp/earnapp_fake_hw"
     if req.spoof_hw:
         hw_setup_cmd = f"mkdir -p {fake_hw_base}"
-        await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], hw_setup_cmd)
+        await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], decrypt_value(node['password']), node['port'], hw_setup_cmd)
 
     for i in range(req.count):
         # Generate UUID and Serial
@@ -42,7 +44,7 @@ async def deploy_bot_bulk(req: DeployBulkReq):
 
         # API Registration Command
         reg_cmd = f"curl -s -X POST 'https://client.earnapp.com/install_device?uuid={uid}&version=1.651.510&arch=arm64&appid=node_earnapp.com&os={os_version}' -H 'Content-Type: application/json' -d '{{\"serial\":\"{serial}\"}}'"
-        succ, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], reg_cmd)
+        succ, out, err = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], decrypt_value(node['password']), node['port'], reg_cmd)
         
         if not succ or "ok" not in out.lower():
             results.append({"status": "failed", "error": f"Registration failed: {out} {err}"})
@@ -68,14 +70,15 @@ async def deploy_bot_bulk(req: DeployBulkReq):
             # Generate fake files
             fake_cpu = f"printf 'processor\\t: 0\\nmodel name\\t: ARM Cortex-A72 r0p3\\nBogoMIPS\\t: {100 + i}.00\\nFeatures\\t: fp asimd evtstrm crc32 cpuid\\n' > {cpu_file}"
             fake_mem = f"printf 'MemTotal:\\t4048576 kB\\nMemFree:\\t1024000 kB\\n' > {mem_file}"
-            await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], f"{fake_cpu} && {fake_mem}")
+            await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], decrypt_value(node['password']), node['port'], f"{fake_cpu} && {fake_mem}")
             docker_run_args.append(f"-v {cpu_file}:/proc/cpuinfo")
             docker_run_args.append(f"-v {mem_file}:/proc/meminfo")
             
         run_cmd = f"docker run {' '.join(docker_run_args)} fazalfarhan01/earnapp:lite"
-        succ3, out3, err3 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], node['password'], node['port'], run_cmd)
+        succ3, out3, err3 = await loop.run_in_executor(None, execute_ssh, node['ip'], node['username'], decrypt_value(node['password']), node['port'], run_cmd)
 
         if succ3:
+            log_action('DEPLOY_BOT', f'Deployed {container_name} successfully', req.ip)
             results.append({
                 "status": "success",
                 "uuid": uid,
